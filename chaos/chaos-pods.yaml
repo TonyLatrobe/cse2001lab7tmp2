@@ -1,0 +1,33 @@
+# Apply this file to intentionally trigger alerts.
+# kubectl apply -f chaos/chaos-pods.yaml -n observability
+# kubectl delete -f chaos/chaos-pods.yaml -n observability   <-- cleanup
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-app-load-gen
+  namespace: observability
+  labels:
+    app: demo-app
+    job: demo-app
+spec:
+  containers:
+    - name: load-gen
+      image: localhost:32000/busybox:lab
+      # This loop now runs forever without exiting
+      command: ["sh", "-c", "while true; do wget -q -O- http://demo-app:80/ > /dev/null; wget -q -O- http://demo-app:80/this-path-does-not-exist > /dev/null; sleep 0.1; done"]
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: jenkins-chaos-impersonator
+  namespace: observability
+  labels:
+    app: jenkins
+    job: jenkins
+spec:
+  containers:
+    - name: cpu-burner
+      image: localhost:32000/busybox:lab
+      # Removed 'exit 1'. This will keep the CPU 'mountain' flat at the top
+      command: ["sh", "-c", "echo 'Jenkins Constant Stress Start'; yes > /dev/null & yes > /dev/null & yes > /dev/null & while true; do sleep 30; done"]
